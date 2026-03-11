@@ -2,27 +2,27 @@
 
 > High-performance Oracle EXP dump file parser written in Rust
 
-Oracle の旧来の `exp` ユーティリティで作成したダンプファイル（`.dmp`）をデータベース接続なしに直接解析するCLIツール／ライブラリです。
+A CLI tool and library for parsing Oracle classic `exp` dump files (`.dmp`) directly — no database connection required.
 
 ---
 
-## 特徴
+## Features
 
-- **高速** — `memmap2` によるゼロコピー読み取りで 2〜5 GB/s のスループット
-- **ゼロアロケーション走査** — `&[u8]` スライスで元バッファを直接参照
-- **DB接続不要** — `.dmp` ファイル単体で解析可能
-- **複数出力形式** — CSV / SQL INSERT / JSON Lines に対応
-- **マルチ文字セット** — Shift_JIS・GBK・UTF-8・WE8MSWIN1252 など20種類対応
-- **Oracle型デコード** — NUMBER・DATE・TIMESTAMP を人間が読める文字列に変換
+- **Fast** — Zero-copy reads via `memmap2` with 2–5 GB/s throughput
+- **Zero-allocation scanning** — Record data is referenced as `&[u8]` slices into the original buffer
+- **No DB connection needed** — Works directly on `.dmp` files
+- **Multiple output formats** — CSV, SQL INSERT statements, and JSON Lines
+- **Multi-charset support** — Shift_JIS, GBK, UTF-8, WE8MSWIN1252, and 20+ others via `encoding_rs`
+- **Oracle type decoding** — NUMBER, DATE, and TIMESTAMP decoded to human-readable strings
 
 ---
 
-## インストール
+## Installation
 
-### 前提条件
+### Prerequisites
 
-- Rust 1.70 以上 ([rustup.rs](https://rustup.rs))
-- Windows の場合: Visual C++ Build Tools または MinGW
+- Rust 1.70 or later ([rustup.rs](https://rustup.rs))
+- Windows only: Visual C++ Build Tools or MinGW
 
 ```bash
 git clone https://github.com/yourname/oracle-exp-reader.git
@@ -30,13 +30,13 @@ cd oracle-exp-reader
 cargo build --release
 ```
 
-ビルド成果物は `target/release/oracle-exp-reader`（Windows では `.exe`）に生成されます。
+The binary is output to `target/release/oracle-exp-reader` (or `.exe` on Windows).
 
 ---
 
-## 使い方
+## Usage
 
-### ヘッダ情報の確認
+### Show dump file info
 
 ```bash
 oracle-exp-reader info dump.dmp
@@ -52,7 +52,7 @@ Total rows    : 48320
 DDL statements: 37
 ```
 
-### DDL の抽出
+### Extract DDL statements
 
 ```bash
 oracle-exp-reader ddl dump.dmp > schema.sql
@@ -66,32 +66,32 @@ CREATE TABLE SCOTT.EMP (
 );
 ```
 
-### テーブルデータのエクスポート
+### Export table data
 
 ```bash
-# CSV形式
+# CSV format
 oracle-exp-reader export dump.dmp -f csv
 
-# JSON Lines形式
+# JSON Lines format
 oracle-exp-reader export dump.dmp -f json
 
-# SQL INSERT文
+# SQL INSERT statements
 oracle-exp-reader export dump.dmp -f sql --batch 500
 
-# 特定テーブルのみ（部分一致）
+# Filter by table name (case-insensitive substring match)
 oracle-exp-reader export dump.dmp -f csv -t EMP
 
-# 先頭1000行のみ
+# Limit to first 1000 rows
 oracle-exp-reader export dump.dmp -f json --limit 1000
 ```
 
-### レコード診断（バイナリ確認）
+### Inspect raw records (diagnostic)
 
 ```bash
-# レコード一覧
+# List records
 oracle-exp-reader records dump.dmp -n 50
 
-# ヘックスダンプ付き
+# With hex dump
 oracle-exp-reader records dump.dmp -n 10 --hex
 ```
 
@@ -104,7 +104,7 @@ oracle-exp-reader records dump.dmp -n 10 --hex
        542              DdlStatement         284  CREATE TABLE SCOTT.EMP
 ```
 
-### バイナリの直接確認
+### Hex dump raw file bytes
 
 ```bash
 oracle-exp-reader hexdump dump.dmp --offset 0x800 -n 256
@@ -112,32 +112,32 @@ oracle-exp-reader hexdump dump.dmp --offset 0x800 -n 256
 
 ---
 
-## コマンドリファレンス
+## Command Reference
 
 ```
 USAGE:
     oracle-exp-reader <COMMAND>
 
 COMMANDS:
-    info       ダンプファイルのヘッダ情報を表示
-    records    全レコードのタイプ・オフセット一覧を表示
-    ddl        DDL文（CREATE TABLE等）を抽出
-    export     テーブルデータをエクスポート
-    hexdump    ファイルの生バイトをhex表示
-    help       ヘルプを表示
+    info       Print dump file header metadata
+    records    List all records with type, offset, and length
+    ddl        Extract DDL statements (CREATE TABLE, etc.)
+    export     Export table data to CSV, SQL, or JSON Lines
+    hexdump    Print raw file bytes as a hex dump
+    help       Print help information
 
-export オプション:
-    -f, --format <FORMAT>  出力形式 [csv|sql|json] (default: csv)
-    -t, --table <TABLE>    テーブル名フィルタ（部分一致）
-        --limit <N>        最大行数 (0=無制限)
-        --batch <N>        SQL形式のINSERT数/バッチ (default: 1000)
+export options:
+    -f, --format <FORMAT>  Output format [csv|sql|json] (default: csv)
+    -t, --table <TABLE>    Filter by table name (substring match)
+        --limit <N>        Maximum rows per table (0 = unlimited)
+        --batch <N>        INSERT statements per batch for SQL format (default: 1000)
 ```
 
 ---
 
-## ライブラリとして使う
+## Library Usage
 
-`Cargo.toml` に追加:
+Add to `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -176,59 +176,59 @@ fn main() -> anyhow::Result<()> {
 
 ---
 
-## プロジェクト構成
+## Project Structure
 
 ```
 src/
-├── lib.rs       ライブラリルート・公開API
-├── types.rs     レコード型・カラム型・データ構造
-├── error.rs     エラー型 (thiserror)
-├── parser.rs    コアバイナリパーサー（ゼロコピー）
-├── reader.rs    高レベル DumpReader API
-├── output.rs    CSV / SQL / JSON 出力フォーマッター
-└── main.rs      CLI エントリポイント
+├── lib.rs       Library root and public API
+├── types.rs     Record types, column types, and data structures
+├── error.rs     Error types (thiserror)
+├── parser.rs    Core binary parser (zero-copy)
+├── reader.rs    High-level DumpReader API
+├── output.rs    CSV / SQL / JSON Lines formatters
+└── main.rs      CLI entry point
 ```
 
 ---
 
-## 対応する Oracle EXP フォーマット
+## Supported Oracle EXP Versions
 
-| Oracle バージョン | 対応状況 |
+| Oracle Version | Status |
 |---|---|
-| Oracle 8i | ✅ |
-| Oracle 9i | ✅ |
-| Oracle 10g | ✅ |
-| Oracle 11g | ✅ |
-| Oracle 12c 以降 | ⚠️ 未検証（expdp推奨） |
+| Oracle 8i | ✅ Supported |
+| Oracle 9i | ✅ Supported |
+| Oracle 10g | ✅ Supported |
+| Oracle 11g | ✅ Supported |
+| Oracle 12c and later | ⚠️ Untested (use `expdp` instead) |
 
-> **注意**: Oracle 10g 以降の `expdp`（Data Pump）形式には対応していません。
+> **Note:** This tool supports the classic `exp` format only. For `expdp` (Data Pump) dumps, use `impdp SQLFILE=out.sql` to extract DDL without importing.
 
 ---
 
-## 対応 Oracle データ型
+## Supported Oracle Data Types
 
-| 型 | デコード結果 |
+| Type | Decoded As |
 |---|---|
-| VARCHAR2 / CHAR | 文字列（NLS変換あり） |
-| NUMBER / FLOAT | 10進数文字列 |
+| VARCHAR2 / CHAR | String (with NLS charset conversion) |
+| NUMBER / FLOAT | Decimal string |
 | DATE | `YYYY-MM-DD HH:MM:SS` |
 | TIMESTAMP | `YYYY-MM-DD HH:MM:SS.nnnnnnnnn` |
-| RAW / BLOB | 16進数文字列 (`0x...`) |
-| CLOB | テキスト |
+| RAW / BLOB | Hex string (`0x...`) |
+| CLOB | Text string |
 | NULL | `NULL` |
 
 ---
 
-## 性能の目安
+## Performance
 
-| 処理内容 | スループット |
+| Operation | Throughput |
 |---|---|
-| レコード走査のみ | 2〜5 GB/s |
-| DDL 抽出 | 1〜3 GB/s |
-| CSV 出力 | 200〜800 MB/s |
-| SQL INSERT 生成 | 100〜400 MB/s |
+| Record scanning only | 2–5 GB/s |
+| DDL extraction | 1–3 GB/s |
+| CSV export | 200–800 MB/s |
+| SQL INSERT generation | 100–400 MB/s |
 
-> リリースビルド（`--release`）はデバッグビルドの3〜10倍高速です。
+> Always build with `--release` for production use — it is 3–10× faster than a debug build.
 
 ```bash
 cargo build --release
@@ -237,26 +237,26 @@ cargo build --release
 
 ---
 
-## 依存クレート
+## Dependencies
 
-| クレート | 用途 |
+| Crate | Purpose |
 |---|---|
-| `memmap2` | メモリマップドファイル読み取り |
-| `encoding_rs` | NLS文字セット変換 |
-| `clap` | CLI引数パース |
-| `thiserror` | エラー型定義 |
-| `serde_json` | JSON Lines出力 |
-| `anyhow` | エラーハンドリング |
+| `memmap2` | Memory-mapped file I/O |
+| `encoding_rs` | NLS charset conversion |
+| `clap` | CLI argument parsing |
+| `thiserror` | Error type definitions |
+| `serde_json` | JSON Lines output |
+| `anyhow` | Error handling |
 
 ---
 
-## ライセンス
+## License
 
 MIT License
 
 ---
 
-## 関連ツール
+## Related Tools
 
-- [Ora2Pg](https://github.com/darold/ora2pg) — Oracle → PostgreSQL マイグレーション
-- Oracle `imp` — 純正インポートツール（`SHOW=Y` でDDL確認のみ可能）
+- [Ora2Pg](https://github.com/darold/ora2pg) — Oracle to PostgreSQL migration tool
+- Oracle `imp` — Official import utility (`SHOW=Y` option prints DDL without importing)
