@@ -1,7 +1,7 @@
 //! Output formatters: CSV, INSERT SQL, JSON Lines, and hex dump.
 
-use std::io::{self, Write};
 use crate::reader::DumpEvent;
+use std::io::{self, Write};
 
 // ─────────────────────────────────────────────────────────────
 // CSV writer
@@ -17,7 +17,12 @@ pub struct CsvWriter<W: Write> {
 
 impl<W: Write> CsvWriter<W> {
     pub fn new(out: W) -> Self {
-        Self { out, delimiter: b',', in_table: false, col_count: 0 }
+        Self {
+            out,
+            delimiter: b',',
+            in_table: false,
+            col_count: 0,
+        }
     }
 
     pub fn with_delimiter(mut self, delim: u8) -> Self {
@@ -42,10 +47,17 @@ impl<W: Write> CsvWriter<W> {
                             Some(b) => csv_escape(&String::from_utf8_lossy(b)),
                         })
                         .collect();
-                    writeln!(self.out, "{}", row.join(&(self.delimiter as char).to_string()))?;
+                    writeln!(
+                        self.out,
+                        "{}",
+                        row.join(&(self.delimiter as char).to_string())
+                    )?;
                 }
             }
-            DumpEvent::TableEnd { table, rows_written } => {
+            DumpEvent::TableEnd {
+                table,
+                rows_written,
+            } => {
                 writeln!(self.out, "-- End of {}: {} rows", table, rows_written)?;
                 self.in_table = false;
             }
@@ -103,7 +115,12 @@ impl<W: Write> SqlInsertWriter<W> {
                 self.total_rows = 0;
                 writeln!(self.out, "-- Loading table {}.{}", owner, table_name)?;
             }
-            DumpEvent::Row { raw_values, owner, table, .. } => {
+            DumpEvent::Row {
+                raw_values,
+                owner,
+                table,
+                ..
+            } => {
                 let values: Vec<String> = raw_values
                     .iter()
                     .map(|v| match v {
@@ -129,7 +146,10 @@ impl<W: Write> SqlInsertWriter<W> {
                     self.flush_buffer()?;
                 }
             }
-            DumpEvent::TableEnd { table, rows_written } => {
+            DumpEvent::TableEnd {
+                table,
+                rows_written,
+            } => {
                 self.flush_buffer()?;
                 writeln!(self.out, "-- End {}: {} rows", table, rows_written)?;
                 writeln!(self.out, "COMMIT;")?;
@@ -168,7 +188,9 @@ fn sql_quote_value(raw: &[u8]) -> String {
 }
 
 fn is_numeric_str(s: &str) -> bool {
-    !s.is_empty() && s.chars().all(|c| c.is_ascii_digit() || c == '.' || c == '-' || c == '+')
+    !s.is_empty()
+        && s.chars()
+            .all(|c| c.is_ascii_digit() || c == '.' || c == '-' || c == '+')
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -202,7 +224,13 @@ impl<W: Write> JsonLinesWriter<W> {
                 });
                 writeln!(self.out, "{}", obj)?;
             }
-            DumpEvent::Row { table, owner, row_index, raw_values, byte_offset } => {
+            DumpEvent::Row {
+                table,
+                owner,
+                row_index,
+                raw_values,
+                byte_offset,
+            } => {
                 let cols: Vec<serde_json::Value> = raw_values
                     .iter()
                     .map(|v| match v {
@@ -227,7 +255,10 @@ impl<W: Write> JsonLinesWriter<W> {
                 });
                 writeln!(self.out, "{}", obj)?;
             }
-            DumpEvent::TableEnd { table, rows_written } => {
+            DumpEvent::TableEnd {
+                table,
+                rows_written,
+            } => {
                 let obj = serde_json::json!({
                     "type": "table_end",
                     "table": table,
@@ -273,7 +304,11 @@ pub fn hex_dump<W: Write>(out: &mut W, data: &[u8], start_offset: usize) -> io::
 
         write!(out, " |")?;
         for &b in chunk {
-            let c = if b >= 0x20 && b < 0x7F { b as char } else { '.' };
+            let c = if b >= 0x20 && b < 0x7F {
+                b as char
+            } else {
+                '.'
+            };
             write!(out, "{}", c)?;
         }
         writeln!(out, "|")?;

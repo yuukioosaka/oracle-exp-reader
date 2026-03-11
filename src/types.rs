@@ -278,7 +278,7 @@ pub struct DumpHeader {
     pub charset: String,
     pub ncharset: String,
     pub platform: String,
-    pub export_mode: String,  // FULL, OWNER, TABLE
+    pub export_mode: String, // FULL, OWNER, TABLE
 }
 
 /// Parsed row from a table

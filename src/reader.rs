@@ -72,7 +72,12 @@ impl DumpReader {
 
         let charset_enc = parser::charset_to_encoding(&header.charset);
 
-        Ok(Self { mmap, records_start, header, charset_enc })
+        Ok(Self {
+            mmap,
+            records_start,
+            header,
+            charset_enc,
+        })
     }
 
     /// Access the parsed dump header metadata.
@@ -112,15 +117,9 @@ pub enum DumpEvent {
     /// File header / metadata
     Header(DumpHeader),
     /// A DDL statement (CREATE TABLE, CREATE INDEX, GRANT, etc.)
-    DdlStatement {
-        sql: String,
-        byte_offset: usize,
-    },
+    DdlStatement { sql: String, byte_offset: usize },
     /// Beginning of row data for a table
-    TableStart {
-        owner: String,
-        table_name: String,
-    },
+    TableStart { owner: String, table_name: String },
     /// A single row of data
     Row {
         table: String,
@@ -131,10 +130,7 @@ pub enum DumpEvent {
         byte_offset: usize,
     },
     /// End of row data for a table
-    TableEnd {
-        table: String,
-        rows_written: u64,
-    },
+    TableEnd { table: String, rows_written: u64 },
     /// End of dump file
     EndOfFile,
     /// Record type not specifically handled — raw bytes available
@@ -173,9 +169,12 @@ impl<'a> Iterator for EventIter<'a> {
                     return Some(Ok(DumpEvent::Header(header)));
                 }
 
-                RecordType::DdlStatement | RecordType::ViewDefinition
-                | RecordType::TriggerDefinition | RecordType::ProcedureBody
-                | RecordType::SequenceDefinition | RecordType::SynonymDefinition => {
+                RecordType::DdlStatement
+                | RecordType::ViewDefinition
+                | RecordType::TriggerDefinition
+                | RecordType::ProcedureBody
+                | RecordType::SequenceDefinition
+                | RecordType::SynonymDefinition => {
                     let sql = decode_text(rec.data, self.charset_enc);
                     if !sql.trim().is_empty() {
                         return Some(Ok(DumpEvent::DdlStatement {
@@ -280,6 +279,14 @@ fn extract_table_name_from_context(data: &[u8]) -> String {
     let end = data.iter().position(|&b| b == 0).unwrap_or(data.len());
     let raw = &data[..end.min(64)];
     // Keep only printable ASCII
-    let s: String = raw.iter().filter(|&&b| b >= 0x20 && b < 0x7F).map(|&b| b as char).collect();
-    if s.is_empty() { "UNKNOWN".to_string() } else { s }
+    let s: String = raw
+        .iter()
+        .filter(|&&b| b >= 0x20 && b < 0x7F)
+        .map(|&b| b as char)
+        .collect();
+    if s.is_empty() {
+        "UNKNOWN".to_string()
+    } else {
+        s
+    }
 }

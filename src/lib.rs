@@ -35,6 +35,6 @@ pub mod parser;
 pub mod reader;
 pub mod types;
 
-pub use reader::DumpReader;
 pub use error::{DumpError, Result};
+pub use reader::DumpReader;
 pub use types::*;

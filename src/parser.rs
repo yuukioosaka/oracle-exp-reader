@@ -44,7 +44,9 @@ const COL_LONG: u8 = 0xFE;
 
 #[inline]
 fn read_u8(data: &[u8], pos: usize) -> Result<u8> {
-    data.get(pos).copied().ok_or(DumpError::UnexpectedEof { offset: pos })
+    data.get(pos)
+        .copied()
+        .ok_or(DumpError::UnexpectedEof { offset: pos })
 }
 
 #[inline]
@@ -60,7 +62,12 @@ fn read_u32be(data: &[u8], pos: usize) -> Result<u32> {
     if pos + 4 > data.len() {
         return Err(DumpError::UnexpectedEof { offset: pos });
     }
-    Ok(u32::from_be_bytes([data[pos], data[pos + 1], data[pos + 2], data[pos + 3]]))
+    Ok(u32::from_be_bytes([
+        data[pos],
+        data[pos + 1],
+        data[pos + 2],
+        data[pos + 3],
+    ]))
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -350,17 +357,11 @@ pub fn decode_column_value(
             ColumnValue::Text(text)
         }
 
-        OracleType::Number | OracleType::Float => {
-            ColumnValue::Number(decode_oracle_number(raw))
-        }
+        OracleType::Number | OracleType::Float => ColumnValue::Number(decode_oracle_number(raw)),
 
-        OracleType::Date => {
-            ColumnValue::Text(decode_oracle_date(raw))
-        }
+        OracleType::Date => ColumnValue::Text(decode_oracle_date(raw)),
 
-        OracleType::Timestamp
-        | OracleType::TimestampWithTZ
-        | OracleType::TimestampWithLocalTZ => {
+        OracleType::Timestamp | OracleType::TimestampWithTZ | OracleType::TimestampWithLocalTZ => {
             ColumnValue::Text(decode_oracle_timestamp(raw))
         }
 
@@ -538,7 +539,10 @@ pub fn decode_oracle_timestamp(data: &[u8]) -> String {
 // ─────────────────────────────────────────────────────────────
 
 fn hex_str(data: &[u8]) -> String {
-    data.iter().map(|b| format!("{:02X}", b)).collect::<Vec<_>>().join("")
+    data.iter()
+        .map(|b| format!("{:02X}", b))
+        .collect::<Vec<_>>()
+        .join("")
 }
 
 /// Resolve an Oracle NLS charset name to an encoding_rs `Encoding`.
